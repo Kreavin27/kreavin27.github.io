@@ -456,6 +456,12 @@ body.kd .app{margin-top:38px;height:calc(100vh - 50px)}
  body.kd #bn{display:none}
 }
 .kam .kc-t,.kam [data-act="cnav"],.kam .kc-today{display:none}.kam{justify-content:space-between}
+
+/* ===== HP: tanpa tarik-untuk-refresh, transisi tab ===== */
+html,body{overscroll-behavior-y:none}
+main{overscroll-behavior:contain}
+@media(max-width:760px){main{overflow-x:hidden}}
+.pg-l{animation:kcsl .26s ease}.pg-r{animation:kcsr .26s ease}
 </style>
 </head>
 <body>
@@ -585,13 +591,13 @@ const late=o=>!o.paid&&o.dDue<TD;
 const unpaid=()=>db.invoices.filter(i=>!i.paid);
 let hide=true,iy=new Date().getFullYear(),im=new Date().getMonth(),view="dash",selP=null,cal={y:new Date().getFullYear(),m:new Date().getMonth(),sel:TD},ed=null,hist=[],chat=[],dtab="soon",rng=6,cd=[];
 let todoOpen=true,kt=null,pfopen=false,hideI=true,hw=0,hs="all",hr=7,tzOpen=false,hday=iso(new Date()),habIco="💧",prevV="dash",sbOpen=false,lockOpen=false,lockIgnored=false,offEdits=false;
-function go(v,keepEd){if(v==="new"&&!keepEd&&edId&&view!=="new"){ed=null;edId=null}if(v==="inc"&&view!=="inc")hide=true;if(v==="new"&&view!=="new")prevV=view;view=v;if(v==="new"&&!ed)newEd();$("#md").innerHTML="";closeSp();render()}
+function go(v,keepEd){if(v==="new"&&!keepEd&&edId&&view!=="new"){ed=null;edId=null}if(v==="inc"&&view!=="inc")hide=true;if(v==="new"&&view!=="new")prevV=view;if(!navPop&&v!==view){try{history.pushState({v},"")}catch(e){}}view=v;if(v==="new"&&!ed)newEd();$("#md").innerHTML="";closeSp();render()}
 function render(){
  syncT();pfopen=false;document.body.classList.remove("pfo");document.documentElement.dataset.t=S().theme||"1";
  setSb(false);$("#mb").innerHTML=ico("menu",22);
  $("#nav").innerHTML=navHtml();$("#nav2").innerHTML=nvb("set","Pengaturan","set");sideStat();
  $("#main").innerHTML=banner()+({dash:vDash,proj:vProj,kmp:vKmp,habit:vHabit,inv:vInv,inc:vInc,cal:vCal,new:vNew,set:vSet}[view])();
- if(view==="new")edDraw();if(view==="dash"&&$("#cw"))drawChart();if(view==="cal"&&cv==="week")kcWeekScroll();if(view==="cal"&&cv==="agenda"&&isM())kaCenter();bnSync();tick();tl()}
+ if(view==="new")edDraw();if(view==="dash"&&$("#cw"))drawChart();if(view==="cal"&&cv==="week")kcWeekScroll();if(view==="cal"&&cv==="agenda"&&isM())kaCenter();bnSync();uiSave();tick();tl()}
 const nvb=(k,t,i)=>`<button class="nv ${view===k?"on":""}" data-go="${k}" title="${t}"><span class="ni">${ico(i)}</span><span class="nl">${t}</span></button>`;
 function navHtml(){const g=view==="proj"||view==="kmp",o=todoOpen||g;
  return nvb("dash","Dashboard","dash")+`<button class="nv ${g?"ga":""} ${o?"op":""}" data-act="tgl" title="To Do List"><span class="ni">${ico("todo")}</span><span class="nl">To Do List</span><span class="car">${ico("chR",14)}</span></button>`+(o?`<div class="sm2">${nvb("proj","Gawean","gawean")}${nvb("kmp","Tugas Kampus","kampus")}</div>`:"")+nvb("habit","Habit","habit")+nvb("inv","Invoice","inv")+nvb("inc","Pendapatan","inc")+nvb("cal","Kalender","cal")+nvb("new","Invoice baru","new")}
@@ -1274,13 +1280,43 @@ function gateHtml(){const fsa=FSA&&!KD;return`<div class="lkb"><div class="lkc g
  <div class="gopt"><button class="on" data-act="gconn"><span class="gi">${ico("cloud",22)}</span><span><b>Google Drive</b><small>Pakai file yang sama dengan HP, tablet, dan .exe</small></span></button>
  ${fsa?`<button data-act="popen"><span class="gi">${ico("inv",20)}</span><span><b>Buka file di komputer</b><small>Pilih kreavin-data.json yang sudah ada</small></span></button><button data-act="pnew"><span class="gi">${ico("new",20)}</span><span><b>Buat file data baru</b><small>Mulai dari kosong</small></span></button>`:""}</div>
  <p class="mu" style="margin:10px 0 0;font-size:12px">Saat login Google, pilih akun yang menyimpan file datamu.</p></div></div>`}
+
+/* ---------- HP: geser antar tab, tombol back, lanjut di posisi terakhir ---------- */
+const TABS=["dash","cal","inv"],UIK="kv_ui",VIEWS=["dash","proj","kmp","habit","inv","inc","cal","set"];
+let navPop=false;
+function uiSave(){try{localStorage.setItem(UIK,JSON.stringify({v:VIEWS.includes(view)?view:"inv",cv,kcd,t:Date.now()}))}catch(e){}}
+function pgAnim(dir){const m=$("#main");if(!m)return;m.classList.remove("pg-l","pg-r");void m.offsetWidth;m.classList.add(dir>0?"pg-l":"pg-r");setTimeout(()=>m.classList.remove("pg-l","pg-r"),320)}
+function hScroll(el){for(let x=el;x&&x!==document.body&&x.tagName!=="MAIN";x=x.parentElement){if(/^(INPUT|TEXTAREA|SELECT)$/.test(x.tagName))return "input";if(x.scrollWidth>x.clientWidth+4){const o=getComputedStyle(x).overflowX;if(o==="auto"||o==="scroll")return x}}return null}
+(()=>{let sx=0,sy=0,st=0,ok=false,sc=null;
+ document.addEventListener("touchstart",e=>{ok=false;if(!isM()||lockOpen||e.touches.length>1)return;const t=e.target;
+  if($("#md").innerHTML.trim()||$("#spw").classList.contains("open"))return;
+  if(t.closest("#kcsw")||t.closest("#bn"))return;sc=hScroll(t);if(sc==="input")return;
+  ok=true;sx=e.touches[0].clientX;sy=e.touches[0].clientY;st=Date.now()},{passive:true});
+ document.addEventListener("touchend",e=>{if(!ok)return;ok=false;const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;
+  if(Math.abs(dx)<70||Math.abs(dx)<Math.abs(dy)*1.5||Date.now()-st>800)return;
+  if(sc&&(dx>0?sc.scrollLeft>2:sc.scrollLeft+sc.clientWidth<sc.scrollWidth-2))return;
+  if(sbOpen){if(dx<0)setSb(false);return}
+  const i=TABS.indexOf(view);
+  if(dx>0){if(view==="dash"||i<0)setSb(true);else{go(TABS[i-1]);pgAnim(-1)}}
+  else if(i>=0&&i<TABS.length-1){go(TABS[i+1]);pgAnim(1)}},{passive:true})})();
+window.addEventListener("popstate",e=>{const keep=()=>{try{history.pushState({v:view},"")}catch(x){}};
+ if(lockOpen){keep();return}
+ if($("#md").innerHTML.trim()){$("#md").innerHTML="";keep();return}
+ if($("#spw").classList.contains("open")){closeSp();keep();return}
+ if(sbOpen&&isM()){setSb(false);keep();return}
+ if(typeof pfopen!=="undefined"&&pfopen){pf(false);keep();return}
+ const v=(e.state&&e.state.v)||"dash";navPop=true;try{go(v,v==="new"&&!!ed)}finally{navPop=false}});
+document.addEventListener("visibilitychange",()=>{if(document.hidden)uiSave()});
 /* ---------- Boot ---------- */
 function boot(){const L=["Menyalakan inti sistem...","Memuat data gawean...","Memeriksa invoice yang belum dibayar...","Memuat tugas kuliah...",`<em>${greet()}${S().name?", "+esc(S().name):""}. Semua sistem siap.</em>`];
  let i=0;const bt=$("#bt"),b=$("#boot"),done=()=>{b.classList.add("out");setTimeout(()=>b.remove(),900)};b.onclick=done;
  (function n(){if(i<L.length){bt.insertAdjacentHTML("beforeend",`<div>${L[i++]}</div>`);setTimeout(n,500)}else setTimeout(done,700)})()}
 document.addEventListener("visibilitychange",()=>{if(document.hidden){clearTimeout(wt);wr()}else pull()});
 window.addEventListener("focus",pull);window.addEventListener("beforeunload",()=>{if(pend)wr()});setInterval(pull,30000);
-render();restore();boot();
+const _ui=(()=>{try{return JSON.parse(localStorage.getItem(UIK))}catch(e){return null}})(),_res=!!(_ui&&Date.now()-_ui.t<12*3600e3);
+if(_res){if(VIEWS.includes(_ui.v))view=_ui.v;if(_ui.cv)cv=_ui.cv;if(_ui.kcd&&/^\d{4}-\d\d-\d\d$/.test(_ui.kcd))kcd=_ui.kcd}
+try{history.replaceState({v:view},"")}catch(e){}
+render();restore();if(_res){const b=$("#boot");if(b)b.remove()}else boot();
 </script>
 </body>
 </html>
