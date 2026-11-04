@@ -467,6 +467,7 @@ main{overscroll-behavior:contain}
 /* ===== Pencarian umum Beranda & tombol back ===== */
 .dsr{display:flex;max-width:none;margin:0 0 14px;height:48px}.dsr svg{color:var(--mu);flex:none}.dsr input{flex:1;background:none;border:0;color:var(--tx);height:100%;padding:0 10px;outline:none;font:inherit}
 body.dsq .dmain{display:none}
+.csr{margin:4px 0 14px}.mdash>.dsr{margin:0 0 12px}
 .dsr-out .dsh{font-size:16px;margin:18px 0 10px}.dsr-out .dsh small{color:var(--mu);font-weight:600;margin-left:4px}
 .dsl{display:grid;gap:8px}.dsl .row{width:100%;text-align:left}
 #xt{position:fixed;left:50%;bottom:110px;transform:translate(-50%,20px);background:var(--tx);color:#121213;padding:10px 18px;border-radius:99px;font-weight:700;font-size:13px;opacity:0;transition:.3s;z-index:96;pointer-events:none}#xt.on{opacity:1;transform:translate(-50%,0)}
@@ -617,7 +618,7 @@ function render(){
  setSb(false);$("#mb").innerHTML=ico("menu",22);
  $("#nav").innerHTML=navHtml();$("#nav2").innerHTML=nvb("set","Pengaturan","set");sideStat();
  $("#main").innerHTML=banner()+({dash:vDash,proj:vProj,kmp:vKmp,habit:vHabit,inv:vInv,inc:vInc,cal:vCal,new:vNew,set:vSet}[view])();
- if(view==="new")edDraw();if(view==="dash"&&$("#cw"))drawChart();if(view==="cal"&&cv==="week")kcWeekScroll();if(view==="cal"&&cv==="agenda"&&isM())kaCenter();bnSync();uiSave();if(!navPop)navTop();document.body.classList.toggle("dsq",view==="dash"&&!!dq.trim());tick();tl()}
+ if(view==="new")edDraw();if(view==="dash"&&$("#cw"))drawChart();if(view==="cal"&&cv==="week")kcWeekScroll();if(view==="cal"&&cv==="agenda"&&isM())kaCenter();bnSync();uiSave();if(!navPop)navTop();document.body.classList.toggle("dsq",view==="dash"&&!!dq.trim());tick();dtopFit();tl()}
 const nvb=(k,t,i)=>`<button class="nv ${view===k?"on":""}" data-go="${k}" title="${t}"><span class="ni">${ico(i)}</span><span class="nl">${t}</span></button>`;
 function navHtml(){const g=view==="proj"||view==="kmp",o=todoOpen||g;
  return nvb("dash","Dashboard","dash")+`<button class="nv ${g?"ga":""} ${o?"op":""}" data-act="tgl" title="To Do List"><span class="ni">${ico("todo")}</span><span class="nl">To Do List</span><span class="car">${ico("chR",14)}</span></button>`+(o?`<div class="sm2">${nvb("proj","Gawean","gawean")}${nvb("kmp","Tugas Kampus","kampus")}</div>`:"")+nvb("habit","Habit","habit")+nvb("inv","Invoice","inv")+nvb("inc","Pendapatan","inc")+nvb("cal","Kalender","cal")+nvb("new","Invoice baru","new")}
@@ -902,7 +903,7 @@ function vDash(){if(isM())return vDashM();
  else rows=un.filter(i=>dtab==="soon"||late(i)).sort((a,b)=>a.dDue<b.dDue?-1:1).slice(0,30).map(i=>`<button class="row" data-go="inv"><span class="ic" style="background:${T[i.type][1]}">${T[i.type][0][0]}</span><span><b>${esc(i.client)}</b><small>${esc(i.no)}</small></span><span class="r">${rp(calc(i).due)}<small>${rel(dd(i.dDue))}</small></span></button>`).join("");
  const tab=(k,t)=>`<button class="pl sm ${dtab===k?"on":""}" data-act="dt" data-k="${k}">${t}</button>`;
  const cy=new Date().getFullYear(),RC=recs().filter(r=>+r.date.slice(0,4)===cy),iv=k=>RC.filter(r=>k==="lain"?!FIX.includes(r.type):r.type===k).reduce((a,r)=>a+r.amt,0),mi=n=>hideI?"Rp ••••••":rp(n);
- return head()+dSearch()+`<div class="dmain"><div class="bar"><div>${[["proj","Gawean"],["kmp","Tugas Kampus"],["inv","Invoice"],["cal","Kalender"]].map((x,i)=>`<button class="pl ${i?"":"on"}" data-go="${x[0]}">${x[1]}</button>`).join("")}</div></div>
+ return dSearch()+head()+dRes()+`<div class="dmain"><div class="bar"><div>${[["proj","Gawean"],["kmp","Tugas Kampus"],["inv","Invoice"],["cal","Kalender"]].map((x,i)=>`<button class="pl ${i?"":"on"}" data-go="${x[0]}">${x[1]}</button>`).join("")}</div></div>
  <div class="dg"><div class="c g11" style="background:var(--bt)"><h2>Belum terbayar</h2><div class="big">${rp(tot)}</div><div class="mu">${un.length} invoice · <span class="${lt.length?"rd":""}">${lt.length} terlambat</span></div></div>
  <div class="c g12 fx"><h2>Jatuh tempo</h2><div class="chips" style="margin:0 0 6px">${tab("soon","Terdekat")}${tab("late","Terlambat")}${tab("proj","Gawean")}</div><div class="sc">${rows||`<p class="mu">Tidak ada data di sini.</p>`}</div></div>
  <div class="c g13"><div class="ch"><b>${new Date(cal.y,cal.m,1).toLocaleDateString(LOC(),{month:"long",year:"numeric"})}</b><span><button class="nb" data-act="cm" data-n="-1">‹</button> <button class="nb" data-act="cm" data-n="1">›</button></span></div>${calGrid(false)}<p class="mu" style="margin:8px 0 0"><span class="rd">●</span> invoice <span style="color:var(--pk)">●</span> gawean <span style="color:#5aa9ff">●</span> tugas kampus</p></div>
@@ -964,12 +965,17 @@ function evAll(a,b){const out=[];
  db.kampus.tasks.filter(t=>t.status!=="done"&&t.deadline).forEach(t=>{const d=t.deadline.slice(0,10),tm=t.deadline.slice(11,16);if(d>=a&&d<=b)out.push({key:"k"+t.id,src:"kmp",id:t.id,date:d,title:"Tugas · "+t.title,sub:"Tugas kuliah",allDay:!tm,s:tm,e:"",color:"#a9cdf5"})});
  return out.sort((x,y)=>x.date<y.date?-1:x.date>y.date?1:x.allDay!==y.allDay?(x.allDay?-1:1):((x.s||"")<(y.s||"")?-1:1))}
 const byD=L=>{const m={};L.forEach(e=>(m[e.date]=m[e.date]||[]).push(e));return m};
-function vCal(){const d=Dd(kcd);let t=`${MFL[d.getMonth()]} ${d.getFullYear()}`;
- if(cv==="week"){const a=Dd(wkS(kcd)),b=Dd(addD(6,wkS(kcd)));t=a.getMonth()===b.getMonth()?t:`${MN[a.getMonth()]} – ${MN[b.getMonth()]} ${b.getFullYear()}`}
- return`${head()}<div class="kc-h ${cv==="agenda"&&isM()?"kam":""}"><div class="kc-t">${t}</div><button class="nb" data-act="cnav" data-n="-1" title="Sebelumnya">‹</button><button class="nb" data-act="cnav" data-n="1" title="Berikutnya">›</button><button class="kc-today" data-act="ctoday" title="Hari ini">${new Date().getDate()}</button>
+function kcT(){const d=Dd(kcd);let t=`${MFL[d.getMonth()]} ${d.getFullYear()}`;
+ if(cv==="week"){const a=Dd(wkS(kcd)),b=Dd(addD(6,wkS(kcd)));t=a.getMonth()===b.getMonth()?t:`${MN[a.getMonth()]} – ${MN[b.getMonth()]} ${b.getFullYear()}`}return t}
+function vCal(){const t=kcT();
+ return`${head()}<label class="srch dsr csr">${ico("search",18)}<input id="cq" type="search" value="${esc(cq)}" placeholder="Cari agenda, jatuh tempo, deadline, tugas…" autocomplete="off">${cq?`<button class="ic2" data-act="cqx" title="Hapus">${ico("x",14)}</button>`:""}</label><div id="kcbody">${cq.trim()?kcResults():kcMain(t)}</div>`}
+function kcMain(t){return`<div class="kc-h ${cv==="agenda"&&isM()?"kam":""}"><div class="kc-t">${t}</div><button class="nb" data-act="cnav" data-n="-1" title="Sebelumnya">‹</button><button class="nb" data-act="cnav" data-n="1" title="Berikutnya">›</button><button class="kc-today" data-act="ctoday" title="Hari ini">${new Date().getDate()}</button>
  <div class="kc-seg">${[["month","Bulan"],["week","Minggu"],["agenda","Agenda"]].map(([k,l])=>`<button class="${cv===k?"on":""}" data-act="cv" data-k="${k}">${l}</button>`).join("")}</div><button class="pl on sm" data-act="evnew">+ Agenda</button></div>
  ${cv==="agenda"&&isM()?kcAgendaM():`<div class="c ${kcAnim}" style="padding:12px" id="kcsw">${cv==="month"?kcMonth():cv==="week"?kcWeek():kcAgenda()}</div>`}
  <div class="kc-lg"><span><i style="background:#ff9f97"></i>Invoice telat</span><span><i style="background:#f3e0a0"></i>Jatuh tempo</span><span><i style="background:#e3b2dc"></i>Deadline gawean</span><span><i style="background:#a9cdf5"></i>Tugas kampus</span><span><i style="background:#c9c8f5"></i>Agenda kamu</span></div>`}
+function kcResults(){const q=cq.trim(),h=x=>hlQ(x,q),L=evAll(addD(-365,TD),addD(365,TD)).filter(e=>qM(q,[e.title,e.sub,e.note].join(" ")));
+ const seen=new Set(),U=[];[...L.filter(e=>e.date>=TD),...L.filter(e=>e.date<TD).reverse()].forEach(e=>{const k=e.src==="ev"?e.id:e.key;if(seen.has(k))return;seen.add(k);U.push(e)});
+ return`<div class="dsr-out"><p class="ires">${U.length} jadwal cocok dengan "<b>${esc(q)}</b>"</p><div class="dsl">${U.slice(0,40).map(e=>{const d=Dd(e.date);return`<button class="row" data-act="evo" data-k="${e.key}" data-d="${e.date}"><span class="ic" style="background:${e.color};color:#121213">${d.getDate()}</span><span><b>${h(e.title)}</b><small>${e.date===TD?"Hari ini":WDS[d.getDay()]+", "+fd(e.date)} · ${tLbl(e)}${e.rep==="w"?" · setiap minggu":""}${e.sub?" · "+h(e.sub):""}</small></span></button>`}).join("")||`<p class="mu">Tidak ada jadwal yang cocok. Coba kata lain.</p>`}</div></div>`}
 function kcMonth(){const d=Dd(kcd),y=d.getFullYear(),m=d.getMonth(),f=iso(new Date(y,m,1)),st=wkS(f),days=new Date(y,m+1,0).getDate(),wk=Math.ceil((Dd(f).getDay()+days)/7),E=byD(evAll(st,addD(wk*7-1,st)));
  let h=WDS.map((w,i)=>`<div class="kc-wd ${new Date().getDay()===i?"t":""}">${w}</div>`).join("");
  for(let i=0;i<wk*7;i++){const ds=addD(i,st),ev=E[ds]||[],out=Dd(ds).getMonth()!==m;
@@ -1144,6 +1150,7 @@ document.addEventListener("click",e=>{
  const inv=()=>db.invoices.find(i=>i.id===d.id),pr=()=>db.projects.find(p=>p.id===d.id);
  if(act==="sbt")setSb(!sbOpen);
  else if(act==="dqx"){dq="";document.body.classList.remove("dsq");render()}
+ else if(act==="cqx"){cq="";render()}
  else if(act==="upnow")upReload();
  else if(act==="upchk")upCheck(true);
  else if(act==="non")nEnable();
@@ -1253,7 +1260,7 @@ document.addEventListener("input",e=>{const t=e.target;if(t.id==="iq"){iq=t.valu
 document.addEventListener("change",e=>{const t=e.target;if(t.id==="ifld"){ifld=t.value;$("#ilist").innerHTML=invList()}else if(t.id==="ef_ad"){$("#ef_tm").style.display=t.checked?"none":""}});
 if(KD&&KD.minimize)document.body.classList.add("kd");
 /* ---------- Pembaruan otomatis (HP / web) ---------- */
-const APPV="1.2.2";let upReady=false;
+const APPV="1.2.3";let upReady=false;
 function upReload(){uiSave();try{if(pend)wr()}catch(e){}setTimeout(()=>location.reload(),400)}
 function upToast(){if($("#upt"))return;const d=document.createElement("div");d.id="upt";d.innerHTML=`<span>Versi baru Kreavin siap.</span><button class="pl sm on" data-act="upnow">Muat sekarang</button>`;document.body.appendChild(d)}
 async function upCheck(manual){try{const r=await navigator.serviceWorker.getRegistration();if(r){await r.update();if(manual&&!upReady)setTimeout(()=>{if(!upReady)alert("Kreavin sudah versi terbaru ("+APPV+").")},2500)}}catch(e){if(manual)alert("Tidak bisa cek pembaruan. Periksa internet.")}}
@@ -1279,7 +1286,7 @@ function vDashM(){const n=S().name||"",un=unpaid(),tot=un.reduce((a,i)=>a+calc(i
  const IV=[...db.invoices].sort((a,b)=>(b.dIn||"")<(a.dIn||"")?-1:1).slice(0,6);
  const KT=db.kampus.tasks.filter(t=>t.status!=="done"&&t.deadline).sort((a,b)=>a.deadline<b.deadline?-1:1).slice(0,3);
  const col=k=>(T[k]||["","#c9c8f5"])[1],ini=k=>((T[k]||["?"])[0]||"?")[0];
- return`<div class="mdash">${head()}${dSearch()}<div class="dmain">
+ return`<div class="mdash">${dSearch()}${head()}${dRes()}<div class="dmain">
  <div class="mh"><div class="mh-top"><span class="mh-av">${esc((n||"K")[0].toUpperCase())}</span><div><small>${greet()},</small><b>${esc(n||"Kreavin")}</b></div></div>
   <div class="mh-lb">Belum terbayar</div><div class="mh-bal"><span>${hv(tot)}</span><button data-act="hi" title="Tampilkan / sembunyikan">${ico(hideI?"eyeoff":"eye",20)}</button></div>
   <div class="mh-sub">${un.length} invoice · ${lt.length} terlambat · masuk bulan ini ${hv(incM)}</div>
@@ -1383,10 +1390,13 @@ function nCard(){if(KD)return"";const on=nOn(),den=NOK()&&Notification.permissio
  return`<div class="fc"><h2>Notifikasi agenda</h2><p class="mu" style="margin-top:0">${on?"Aktif. Saat Kreavin dibuka tiap hari kamu dapat ringkasan agenda hari ini, plus pengingat 15 menit sebelum agenda berjam.":den?"Izin notifikasi diblokir di browser. Buka pengaturan situs / aplikasi untuk mengizinkan.":"Tampilkan ringkasan agenda hari ini dan pengingat 15 menit sebelum acara di HP-mu."}</p><div class="chips">${on?`<button class="pl sm on" data-act="ntest">Kirim ringkasan sekarang</button><button class="pl sm" data-act="noff">Matikan</button>`:`<button class="pl sm on" data-act="non">Aktifkan notifikasi</button>`}</div></div>`}
 
 /* ---------- Pencarian umum di Beranda ---------- */
-let dq="";
+let dq="",cq="";
 function qM(q,txt){q=nrm(q).trim();if(!q)return true;txt=nrm(txt);const W=txt.split(/[^a-z0-9]+/).filter(Boolean);return q.split(/\s+/).every(t=>tokOK(t,txt,W))}
 function hlQ(x,q){x=String(x||"");q=String(q||"").trim();if(!q)return esc(x);const T=q.split(/\s+/).filter(t=>t.length>1);if(!T.length)return esc(x);const re=new RegExp("("+T.map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|")+")","gi");return x.split(re).map((p,k)=>k%2?`<mark class="hl">${esc(p)}</mark>`:esc(p)).join("")}
-function dSearch(){return`<label class="srch dsr">${ico("search",18)}<input id="dq" type="search" value="${esc(dq)}" placeholder="Cari invoice, jadwal, gawean, tugas kuliah, klien…" autocomplete="off">${dq?`<button class="ic2" data-act="dqx" title="Hapus">${ico("x",14)}</button>`:""}</label><div id="dres">${dq.trim()?dResults():""}</div>`}
+function dSearch(){return`<label class="srch dsr dtop">${ico("search",18)}<input id="dq" type="search" value="${esc(dq)}" placeholder="Cari invoice, jadwal, gawean, tugas kuliah, klien…" autocomplete="off">${dq?`<button class="ic2" data-act="dqx" title="Hapus">${ico("x",14)}</button>`:""}</label>`}
+function dtopFit(){const b=$(".dtop"),p=$("#clk");if(!b)return;b.style.marginRight="";if(isM()||!p)return;const r=b.getBoundingClientRect(),q=p.getBoundingClientRect();if(q.bottom>r.top&&q.left<r.right)b.style.marginRight=(r.right-q.left+14)+"px"}
+addEventListener("resize",()=>{if(view==="dash")dtopFit()});
+function dRes(){return`<div id="dres">${dq.trim()?dResults():""}</div>`}
 function dResults(){const q=dq.trim(),m=t=>qM(q,t),h=x=>hlQ(x,q),sec=(t,n,b)=>n?`<h2 class="dsh">${t} <small>${n}</small></h2><div class="dsl">${b}</div>`:"";
  const col=k=>(T[k]||["","#c9c8f5"])[1],ini=k=>((T[k]||["?"])[0]||"?")[0];
  const IV=db.invoices.filter(i=>m([i.client,i.co,i.no,i.ev,i.mail,(i.items||[]).map(x=>x.d).join(" ")].join(" "))).sort((a,b)=>(b.dIn||"")<(a.dIn||"")?-1:1);
@@ -1402,7 +1412,7 @@ function dResults(){const q=dq.trim(),m=t=>qM(q,t),h=x=>hlQ(x,q),sec=(t,n,b)=>n?
  const inR=IN.slice(0,6).map(x=>`<button class="row" data-go="inc"><span class="ic" style="background:${tc(x.type||"lain")}">${tn(x.type||"lain")[0]}</span><span><b>${h(x.note||"Pemasukan manual")}</b><small>${fd(x.date)} · ${esc(tn(x.type||"lain"))}</small></span><span class="r">${hideI?"Rp ••••":rp(+x.amount||0)}</span></button>`).join("");
  const tot=IV.length+EV.length+PJ.length+KT.length+IN.length;
  return`<div class="dsr-out"><p class="ires">${tot} hasil untuk "<b>${esc(q)}</b>"</p>${sec("Invoice",IV.length,ivR)}${sec("Jadwal & agenda",EV.length,evR)}${sec("Gawean",PJ.length,pjR)}${sec("Tugas kuliah",KT.length,ktR)}${sec("Pemasukan",IN.length,inR)}${tot?"":`<p class="mu">Tidak ada yang cocok. Coba kata lain.</p>`}</div>`}
-document.addEventListener("input",e=>{if(e.target.id==="dq"){dq=e.target.value;document.body.classList.toggle("dsq",!!dq.trim());const r=$("#dres");if(r)r.innerHTML=dq.trim()?dResults():""}});
+document.addEventListener("input",e=>{if(e.target.id==="cq"){cq=e.target.value;const b=$("#kcbody");if(b){b.innerHTML=cq.trim()?kcResults():kcMain(kcT());if(!cq.trim()){if(cv==="week"){wkScr=true;kcWeekScroll()}if(cv==="agenda"&&isM())kaCenter()}}return}if(e.target.id==="dq"){dq=e.target.value;document.body.classList.toggle("dsq",!!dq.trim());const r=$("#dres");if(r)r.innerHTML=dq.trim()?dResults():""}});
 /* ---------- Boot ---------- */
 function boot(){const L=["Menyalakan inti sistem...","Memuat data gawean...","Memeriksa invoice yang belum dibayar...","Memuat tugas kuliah...",`<em>${greet()}${S().name?", "+esc(S().name):""}. Semua sistem siap.</em>`];
  let i=0;const bt=$("#bt"),b=$("#boot"),done=()=>{b.classList.add("out");setTimeout(()=>b.remove(),900)};b.onclick=done;
