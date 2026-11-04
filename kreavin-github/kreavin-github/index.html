@@ -463,6 +463,13 @@ main{overscroll-behavior:contain}
 @media(max-width:760px){main{overflow-x:hidden}}
 .pg-l{animation:kcsl .26s ease}.pg-r{animation:kcsr .26s ease}
 #upt{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;z-index:95;display:flex;align-items:center;gap:12px;background:var(--modalb);border:1px solid var(--line);color:var(--tx);border-radius:18px;padding:10px 12px 10px 16px;box-shadow:0 12px 30px rgba(0,0,0,.5);white-space:nowrap;font-size:14px}
+
+/* ===== Pencarian umum Beranda & tombol back ===== */
+.dsr{display:flex;max-width:none;margin:0 0 14px;height:48px}.dsr svg{color:var(--mu);flex:none}.dsr input{flex:1;background:none;border:0;color:var(--tx);height:100%;padding:0 10px;outline:none;font:inherit}
+body.dsq .dmain{display:none}
+.dsr-out .dsh{font-size:16px;margin:18px 0 10px}.dsr-out .dsh small{color:var(--mu);font-weight:600;margin-left:4px}
+.dsl{display:grid;gap:8px}.dsl .row{width:100%;text-align:left}
+#xt{position:fixed;left:50%;bottom:110px;transform:translate(-50%,20px);background:var(--tx);color:#121213;padding:10px 18px;border-radius:99px;font-weight:700;font-size:13px;opacity:0;transition:.3s;z-index:96;pointer-events:none}#xt.on{opacity:1;transform:translate(-50%,0)}
 </style>
 </head>
 <body>
@@ -543,9 +550,21 @@ const lsG=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsS=(k,v
 const gcid=()=>K_GCID||lsG("kv_gcid")||"",gkey=()=>K_KEY||lsG("kv_gkey")||"",gapp=()=>K_APP||lsG("kv_gapp")||"";
 let gtok=jG("kv_gtok"),gisP=null,gapiP=null;
 const gOK=()=>!!(gtok&&gtok.exp>Date.now()+60000);
+/* Login Google: di HP/aplikasi terpasang pakai pindah halaman (redirect), di komputer pakai jendela pop-up */
+const gRedir=()=>{try{return matchMedia("(display-mode: standalone)").matches||!!navigator.standalone||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)}catch(e){return false}};
+const gRU=()=>location.origin+location.pathname.replace(/index\.html$/,"");
+function gAuth(prompt,act){if(!gRedir())return gAuthPop(prompt);
+ const st=Math.random().toString(36).slice(2)+Date.now().toString(36);lsS("kv_oast",JSON.stringify({st,act:act||"conn"}));try{uiSave()}catch(e){}
+ const q={client_id:gcid(),redirect_uri:gRU(),response_type:"token",scope:GSCOPE,include_granted_scopes:"true",state:st};if(prompt)q.prompt=prompt;
+ location.href="https://accounts.google.com/o/oauth2/v2/auth?"+new URLSearchParams(q);return new Promise(()=>{})}
+let gPend="";(()=>{const h=location.hash;if(!/access_token=|error=/.test(h))return;const q=new URLSearchParams(h.slice(1)),o=jG("kv_oast")||{};
+ try{history.replaceState(history.state,"",location.pathname+location.search)}catch(e){}
+ if(!o.st||q.get("state")!==o.st)return;try{localStorage.removeItem("kv_oast")}catch(e){}
+ if(q.get("access_token")){gtok={t:q.get("access_token"),exp:Date.now()+(+q.get("expires_in")||3600)*1000};lsS("kv_gtok",JSON.stringify(gtok));lsS("kv_gok","1");gPend=o.act||"conn"}
+ else gPend="err:"+(q.get("error")||"")})();
 function loadGIS(){if(window.google&&google.accounts&&google.accounts.oauth2)return Promise.resolve();return gisP||(gisP=new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="https://accounts.google.com/gsi/client";sc.onload=res;sc.onerror=()=>{gisP=null;rej(new Error("Layanan login Google tidak bisa dimuat. Periksa internet."))};document.head.appendChild(sc)}))}
 function loadPicker(){return gapiP||(gapiP=new Promise((res,rej)=>{const go2=()=>gapi.load("picker",{callback:res,onerror:()=>rej(new Error("Google Picker gagal dimuat."))});if(window.gapi&&gapi.load)return go2();const sc=document.createElement("script");sc.src="https://apis.google.com/js/api.js";sc.onload=go2;sc.onerror=()=>{gapiP=null;rej(new Error("Google Picker gagal dimuat."))};document.head.appendChild(sc)}))}
-function gAuth(prompt){return new Promise((res,rej)=>{const run=()=>{try{google.accounts.oauth2.initTokenClient({client_id:gcid(),scope:GSCOPE,
+function gAuthPop(prompt){return new Promise((res,rej)=>{const run=()=>{try{google.accounts.oauth2.initTokenClient({client_id:gcid(),scope:GSCOPE,
  callback:r=>{if(r.error)return rej(new Error(r.error_description||r.error));gtok={t:r.access_token,exp:Date.now()+(+r.expires_in||3600)*1000};lsS("kv_gtok",JSON.stringify(gtok));lsS("kv_gok","1");res()},
  error_callback:e=>rej(new Error(e&&e.type==="popup_closed"?"Jendela login Google ditutup.":e&&e.type==="popup_failed_to_open"?"Jendela login Google diblokir. Izinkan pop-up untuk situs ini.":"Login Google gagal."))}).requestAccessToken({prompt})}catch(e){rej(e)}};
  if(window.google&&google.accounts&&google.accounts.oauth2)run();else loadGIS().then(run,rej)})}
@@ -556,7 +575,7 @@ async function gf(url,opt={}){if(!gOK())throw new DOMException("Sesi Google bera
  if(!r.ok){let m="";try{m=(await r.json()).error.message}catch(e){}throw new Error("Google Drive: "+(m||r.status))}return r}
 class GH{constructor(id,name){this.id=id;this.name=name;this.kind="gdrive"}
  async queryPermission(){return gOK()?"granted":"prompt"}
- async requestPermission(){if(!gOK())await gAuth("");return"granted"}
+ async requestPermission(){if(!gOK())await gAuth("","reauth");return"granted"}
  async getFile(){const id=this.id,m=await(await gf(`${GAPI}/files/${id}?fields=modifiedTime,trashed`)).json();if(m.trashed)throw new DOMException("File dipindah ke sampah","NotFoundError");
   return{lastModified:Date.parse(m.modifiedTime),text:async()=>(await gf(`${GAPI}/files/${id}?alt=media&_=${Date.now()}`)).text()}}
  async createWritable(){let b="";const id=this.id;return{write:async d=>{b=d},close:async()=>{await gf(`${GUP}/files/${id}?uploadType=media`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:b})}}}}
@@ -566,13 +585,13 @@ function gPick(){return loadPicker().then(()=>new Promise(res=>{const P=google.p
  const b=new P.PickerBuilder().addView(v).addView(new P.DocsView(P.ViewId.DOCS).setIncludeFolders(true).setMode(P.DocsViewMode.LIST)).setOAuthToken(gtok.t).setTitle("Pilih file kreavin-data.json").setCallback(d=>{if(d.action===P.Action.PICKED)res({id:d.docs[0].id,name:d.docs[0].name});else if(d.action===P.Action.CANCEL)res(null)});
  if(gkey())b.setDeveloperKey(gkey());if(gapp())b.setAppId(gapp());b.build().setVisible(true)}))}
 async function gConnect(forcePick){if(!gcid()){gSetup();return}
- try{if(!gOK())await gAuth(lsG("kv_gok")?"":"consent");
+ try{if(!gOK())await gAuth(lsG("kv_gok")?"":"consent",forcePick?"pick":"conn");
   let f=null;if(!forcePick){const L=(await(await gf(`${GAPI}/files?q=${encodeURIComponent("name='kreavin-data.json' and trashed=false")}&orderBy=modifiedTime desc&fields=files(id,name)`)).json()).files||[];f=L[0]||null}
   if(!f){f=await gPick();if(!f)return}
   await gUse(f.id,f.name)}
  catch(e){alert("Google Drive: "+e.message)}}
 function gSetup(){openM(`<h2>Atur Google Drive</h2><p class="mu">Isi sekali saja (dari Google Cloud). Setelah tersimpan, ketuk Sambungkan Google Drive.</p><label>OAuth Client ID</label><input id="gc_c" value="${esc(gcid())}" placeholder="xxxx.apps.googleusercontent.com"><label>API key (Google Picker)</label><input id="gc_k" value="${esc(gkey())}"><label>Project number (App ID)</label><input id="gc_a" value="${esc(gapp())}"><p class="mu">Alamat aplikasi: <b>${esc(location.origin)}</b></p><div class="chips" style="margin-top:12px"><button class="pl on" data-act="gcsave">Simpan</button></div>`)}
-let lockMode="";async function restore(){try{await restore0()}catch(e){}restored=true;render();setTimeout(()=>notifyToday(false),2500)}
+let lockMode="";async function restore(){try{await restore0()}catch(e){}restored=true;render();setTimeout(()=>notifyToday(false),2500);if(gPend){const a=gPend;gPend="";if(a.startsWith("err:")){if(a!=="err:access_denied")alert("Login Google gagal ("+a.slice(4)+"). Coba lagi.")}else if(stat!=="ok")gConnect(a==="pick")}}
 async function restore0(){if(!KD&&lsG("kv_mode")==="gdrive"){const g=jG("kv_gfile");if(gcid())loadGIS().catch(()=>{});if(g){fh=new GH(g.id,g.name);fname="Google Drive · "+g.name;stat=gOK()?"ok":"need";if(stat==="ok"){try{await ld(fh);loaded=true}catch(e){stat="need"}}}render();return}
  if(KD){try{const i=await KD.info();fh=new KH(i.name);fname=i.name;stat="ok";if(i.exists&&i.size>0)await ld(fh);else{pend=true;await wr()}loaded=true;save()}catch(e){stat="need"}render();return}
  if(!FSA)return;try{const h=await idb("get");if(!h)return;fh=h;fname=h.name;if(await h.queryPermission({mode:"readwrite"})==="granted"){stat="ok";await ld(h)}else stat="need"}catch(e){}render()}
@@ -592,13 +611,13 @@ const late=o=>!o.paid&&o.dDue<TD;
 const unpaid=()=>db.invoices.filter(i=>!i.paid);
 let hide=true,iy=new Date().getFullYear(),im=new Date().getMonth(),view="dash",selP=null,cal={y:new Date().getFullYear(),m:new Date().getMonth(),sel:TD},ed=null,hist=[],chat=[],dtab="soon",rng=6,cd=[];
 let todoOpen=true,kt=null,pfopen=false,hideI=true,hw=0,hs="all",hr=7,tzOpen=false,hday=iso(new Date()),habIco="💧",prevV="dash",sbOpen=false,lockOpen=false,lockIgnored=false,offEdits=false;
-function go(v,keepEd){if(v==="new"&&!keepEd&&edId&&view!=="new"){ed=null;edId=null}if(v==="inc"&&view!=="inc")hide=true;if(v==="new"&&view!=="new")prevV=view;if(!navPop&&v!==view){try{history.pushState({v},"")}catch(e){}}view=v;if(v==="new"&&!ed)newEd();$("#md").innerHTML="";closeSp();render()}
+function go(v,keepEd){if(v==="new"&&!keepEd&&edId&&view!=="new"){ed=null;edId=null}if(v==="inc"&&view!=="inc")hide=true;if(v==="new"&&view!=="new")prevV=view;if(!navPop&&v!==view){VST.push(view);if(v==="dash")VST=[]}view=v;if(v==="new"&&!ed)newEd();$("#md").innerHTML="";closeSp();render()}
 function render(){
  syncT();pfopen=false;document.body.classList.remove("pfo");document.documentElement.dataset.t=S().theme||"1";
  setSb(false);$("#mb").innerHTML=ico("menu",22);
  $("#nav").innerHTML=navHtml();$("#nav2").innerHTML=nvb("set","Pengaturan","set");sideStat();
  $("#main").innerHTML=banner()+({dash:vDash,proj:vProj,kmp:vKmp,habit:vHabit,inv:vInv,inc:vInc,cal:vCal,new:vNew,set:vSet}[view])();
- if(view==="new")edDraw();if(view==="dash"&&$("#cw"))drawChart();if(view==="cal"&&cv==="week")kcWeekScroll();if(view==="cal"&&cv==="agenda"&&isM())kaCenter();bnSync();uiSave();tick();tl()}
+ if(view==="new")edDraw();if(view==="dash"&&$("#cw"))drawChart();if(view==="cal"&&cv==="week")kcWeekScroll();if(view==="cal"&&cv==="agenda"&&isM())kaCenter();bnSync();uiSave();if(!navPop)navTop();document.body.classList.toggle("dsq",view==="dash"&&!!dq.trim());tick();tl()}
 const nvb=(k,t,i)=>`<button class="nv ${view===k?"on":""}" data-go="${k}" title="${t}"><span class="ni">${ico(i)}</span><span class="nl">${t}</span></button>`;
 function navHtml(){const g=view==="proj"||view==="kmp",o=todoOpen||g;
  return nvb("dash","Dashboard","dash")+`<button class="nv ${g?"ga":""} ${o?"op":""}" data-act="tgl" title="To Do List"><span class="ni">${ico("todo")}</span><span class="nl">To Do List</span><span class="car">${ico("chR",14)}</span></button>`+(o?`<div class="sm2">${nvb("proj","Gawean","gawean")}${nvb("kmp","Tugas Kampus","kampus")}</div>`:"")+nvb("habit","Habit","habit")+nvb("inv","Invoice","inv")+nvb("inc","Pendapatan","inc")+nvb("cal","Kalender","cal")+nvb("new","Invoice baru","new")}
@@ -883,14 +902,14 @@ function vDash(){if(isM())return vDashM();
  else rows=un.filter(i=>dtab==="soon"||late(i)).sort((a,b)=>a.dDue<b.dDue?-1:1).slice(0,30).map(i=>`<button class="row" data-go="inv"><span class="ic" style="background:${T[i.type][1]}">${T[i.type][0][0]}</span><span><b>${esc(i.client)}</b><small>${esc(i.no)}</small></span><span class="r">${rp(calc(i).due)}<small>${rel(dd(i.dDue))}</small></span></button>`).join("");
  const tab=(k,t)=>`<button class="pl sm ${dtab===k?"on":""}" data-act="dt" data-k="${k}">${t}</button>`;
  const cy=new Date().getFullYear(),RC=recs().filter(r=>+r.date.slice(0,4)===cy),iv=k=>RC.filter(r=>k==="lain"?!FIX.includes(r.type):r.type===k).reduce((a,r)=>a+r.amt,0),mi=n=>hideI?"Rp ••••••":rp(n);
- return head()+`<div class="bar"><div>${[["proj","Gawean"],["kmp","Tugas Kampus"],["inv","Invoice"],["cal","Kalender"]].map((x,i)=>`<button class="pl ${i?"":"on"}" data-go="${x[0]}">${x[1]}</button>`).join("")}</div></div>
+ return head()+dSearch()+`<div class="dmain"><div class="bar"><div>${[["proj","Gawean"],["kmp","Tugas Kampus"],["inv","Invoice"],["cal","Kalender"]].map((x,i)=>`<button class="pl ${i?"":"on"}" data-go="${x[0]}">${x[1]}</button>`).join("")}</div></div>
  <div class="dg"><div class="c g11" style="background:var(--bt)"><h2>Belum terbayar</h2><div class="big">${rp(tot)}</div><div class="mu">${un.length} invoice · <span class="${lt.length?"rd":""}">${lt.length} terlambat</span></div></div>
  <div class="c g12 fx"><h2>Jatuh tempo</h2><div class="chips" style="margin:0 0 6px">${tab("soon","Terdekat")}${tab("late","Terlambat")}${tab("proj","Gawean")}</div><div class="sc">${rows||`<p class="mu">Tidak ada data di sini.</p>`}</div></div>
  <div class="c g13"><div class="ch"><b>${new Date(cal.y,cal.m,1).toLocaleDateString(LOC(),{month:"long",year:"numeric"})}</b><span><button class="nb" data-act="cm" data-n="-1">‹</button> <button class="nb" data-act="cm" data-n="1">›</button></span></div>${calGrid(false)}<p class="mu" style="margin:8px 0 0"><span class="rd">●</span> invoice <span style="color:var(--pk)">●</span> gawean <span style="color:#5aa9ff">●</span> tugas kampus</p></div>
  <div class="c g21 fx"><div class="ch"><h2 style="margin:0">Tugas Kuliah</h2><button class="pl sm" data-go="kmp">Lihat semua</button></div><div class="sc">${secs(kmpItems(),["addk","Tambah tugas"])}</div></div>
  <div class="c g22 fx"><div class="ch"><h2 style="margin:0">Kerjaan</h2><button class="pl sm" data-go="proj">Lihat semua</button></div><div class="sc">${secs(projItems(),["addp","Tambah gawean"])}</div></div></div>
  <div class="dg2"><div class="c"><div class="ch"><h2 style="margin:0">Tagihan per bulan</h2><div class="chips" style="margin:0">${[[3,"3 bln"],[6,"6 bln"],[12,"1 thn"]].map(r=>`<button class="pl sm ${rng===r[0]?"on":""}" data-act="rg" data-n="${r[0]}">${r[1]}</button>`).join("")}</div></div><div class="chartw${hideI?" hid":""}" id="cw"></div></div>
- <div class="c"><div class="ch"><h2 style="margin:0">Income</h2><div class="chips" style="margin:0"><button class="pl sm" data-act="hi" title="Tampilkan / sembunyikan angka">${ico(hideI?"eyeoff":"eye",16)}</button><button class="pl sm" data-go="inc">Lihat semua</button></div></div><div class="mini">${[...FIX,"lain"].map(k=>`<button class="mc" data-go="inc"><span class="ic" style="background:${tc(k)};width:26px;height:26px;font-size:12px">${tn(k)[0]}</span><br><b>${mi(iv(k))}</b><br><span class="mu">${tn(k)}</span></button>`).join("")}</div></div></div>`}
+ <div class="c"><div class="ch"><h2 style="margin:0">Income</h2><div class="chips" style="margin:0"><button class="pl sm" data-act="hi" title="Tampilkan / sembunyikan angka">${ico(hideI?"eyeoff":"eye",16)}</button><button class="pl sm" data-go="inc">Lihat semua</button></div></div><div class="mini">${[...FIX,"lain"].map(k=>`<button class="mc" data-go="inc"><span class="ic" style="background:${tc(k)};width:26px;height:26px;font-size:12px">${tn(k)[0]}</span><br><b>${mi(iv(k))}</b><br><span class="mu">${tn(k)}</span></button>`).join("")}</div></div></div></div>`}
 /* ---------- Tugas Kampus ---------- */
 function vKmp(){const k=db.kampus,cn=id=>(k.courses.find(c=>c.id===id)||{}).name||"Tanpa matkul";
  const col=(s,l)=>{const a=k.tasks.filter(t=>t.status===s).sort((p,q)=>dlm(p.deadline)-dlm(q.deadline));return`<div class="kc"><div class="ch"><span class="bd ${s}">${l}</span><span class="mu">${a.length}</span></div><div class="sc">${a.map(t=>tkb({st:s,t:dlm(t.deadline),sub:cn(t.cid),title:t.title,a:`data-act="opk" data-id="${t.id}"`})).join("")}<button class="addrow" data-act="addk" data-s="${s}">+ Tugas baru</button></div></div>`};
@@ -1124,6 +1143,7 @@ document.addEventListener("click",e=>{
  const a=e.target.closest("[data-act]");if(!a)return;const d=a.dataset,act=d.act;
  const inv=()=>db.invoices.find(i=>i.id===d.id),pr=()=>db.projects.find(p=>p.id===d.id);
  if(act==="sbt")setSb(!sbOpen);
+ else if(act==="dqx"){dq="";document.body.classList.remove("dsq");render()}
  else if(act==="upnow")upReload();
  else if(act==="upchk")upCheck(true);
  else if(act==="non")nEnable();
@@ -1233,7 +1253,7 @@ document.addEventListener("input",e=>{const t=e.target;if(t.id==="iq"){iq=t.valu
 document.addEventListener("change",e=>{const t=e.target;if(t.id==="ifld"){ifld=t.value;$("#ilist").innerHTML=invList()}else if(t.id==="ef_ad"){$("#ef_tm").style.display=t.checked?"none":""}});
 if(KD&&KD.minimize)document.body.classList.add("kd");
 /* ---------- Pembaruan otomatis (HP / web) ---------- */
-const APPV="1.2.0";let upReady=false;
+const APPV="1.2.2";let upReady=false;
 function upReload(){uiSave();try{if(pend)wr()}catch(e){}setTimeout(()=>location.reload(),400)}
 function upToast(){if($("#upt"))return;const d=document.createElement("div");d.id="upt";d.innerHTML=`<span>Versi baru Kreavin siap.</span><button class="pl sm on" data-act="upnow">Muat sekarang</button>`;document.body.appendChild(d)}
 async function upCheck(manual){try{const r=await navigator.serviceWorker.getRegistration();if(r){await r.update();if(manual&&!upReady)setTimeout(()=>{if(!upReady)alert("Kreavin sudah versi terbaru ("+APPV+").")},2500)}}catch(e){if(manual)alert("Tidak bisa cek pembaruan. Periksa internet.")}}
@@ -1259,7 +1279,7 @@ function vDashM(){const n=S().name||"",un=unpaid(),tot=un.reduce((a,i)=>a+calc(i
  const IV=[...db.invoices].sort((a,b)=>(b.dIn||"")<(a.dIn||"")?-1:1).slice(0,6);
  const KT=db.kampus.tasks.filter(t=>t.status!=="done"&&t.deadline).sort((a,b)=>a.deadline<b.deadline?-1:1).slice(0,3);
  const col=k=>(T[k]||["","#c9c8f5"])[1],ini=k=>((T[k]||["?"])[0]||"?")[0];
- return`<div class="mdash">${head()}
+ return`<div class="mdash">${head()}${dSearch()}<div class="dmain">
  <div class="mh"><div class="mh-top"><span class="mh-av">${esc((n||"K")[0].toUpperCase())}</span><div><small>${greet()},</small><b>${esc(n||"Kreavin")}</b></div></div>
   <div class="mh-lb">Belum terbayar</div><div class="mh-bal"><span>${hv(tot)}</span><button data-act="hi" title="Tampilkan / sembunyikan">${ico(hideI?"eyeoff":"eye",20)}</button></div>
   <div class="mh-sub">${un.length} invoice · ${lt.length} terlambat · masuk bulan ini ${hv(incM)}</div>
@@ -1269,7 +1289,7 @@ function vDashM(){const n=S().name||"",un=unpaid(),tot=un.reduce((a,i)=>a+calc(i
  <div class="ms-h"><b>Tagihan terbaru</b><button data-go="inv">Lihat semua</button></div>
  <div class="ml">${IV.map(i=>`<button class="mr" data-act="edinv" data-id="${i.id}"><span class="ic" style="background:${col(i.type)}">${esc(ini(i.type))}</span><span><b>${esc(i.client||"-")}</b><small>${esc(i.no)} · ${fd(i.dDue)}</small></span><span class="am ${i.paid?"ok":late(i)?"late":""}">${hideI?"••••":rp(calc(i).due)}</span></button>`).join("")||`<p class="mu">Belum ada invoice.</p>`}</div>
  ${KT.length?`<div class="ms-h"><b>Tugas kuliah terdekat</b><button data-go="kmp">Lihat semua</button></div><div class="ml">${KT.map(t=>`<button class="mr" data-act="kopen" data-id="${t.id}"><span class="ic" style="background:#a9cdf5">T</span><span><b>${esc(t.title)}</b><small>${fd(t.deadline.slice(0,10))}${t.deadline.length>10?" · "+t.deadline.slice(11,16):""}</small></span></button>`).join("")}</div>`:""}
- </div>`}
+ </div></div>`}
 function moreM(){const it=(v,ic,t)=>`<button data-act="mgo" data-v="${v}">${ico(ic,24)}${t}</button>`;
  openM(`<h2>Menu</h2><div class="mmore">${it("proj","gawean","Gawean")+it("kmp","kampus","Kampus")+it("inv","inv","Invoice")+it("inc","inc","Income")+it("cal","cal","Kalender")+it("habit","habit","Habit")+it("set","set","Pengaturan")}</div>`)}
 /* agenda mobile */
@@ -1318,13 +1338,23 @@ function hScroll(el){for(let x=el;x&&x!==document.body&&x.tagName!=="MAIN";x=x.p
   const i=TABS.indexOf(view);
   if(dx>0){if(view==="dash"||i<0)setSb(true);else{go(TABS[i-1]);pgAnim(-1)}}
   else if(i>=0&&i<TABS.length-1){go(TABS[i+1]);pgAnim(1)}},{passive:true})})();
-window.addEventListener("popstate",e=>{const keep=()=>{try{history.pushState({v:view},"")}catch(x){}};
- if(lockOpen){keep();return}
- if($("#md").innerHTML.trim()){$("#md").innerHTML="";keep();return}
- if($("#spw").classList.contains("open")){closeSp();keep();return}
- if(sbOpen&&isM()){setSb(false);keep();return}
- if(typeof pfopen!=="undefined"&&pfopen){pf(false);keep();return}
- const v=(e.state&&e.state.v)||"dash";navPop=true;try{go(v,v==="new"&&!!ed)}finally{navPop=false}});
+/* Setiap langkah yang bisa di-"back" punya satu entri riwayat; entri dibuat saat layar disentuh supaya HP tidak melewatinya.
+   Di Beranda, back pertama memunculkan "tekan sekali lagi", back kedua baru menutup aplikasi. */
+let NS=0,navIgn=0,VST=[];
+const mdOpen=()=>!!$("#md").innerHTML.trim(),spOpen=()=>$("#spw").classList.contains("open");
+const navNeed=()=>Math.min(40,(mdOpen()?1:0)+(spOpen()?1:0)+(sbOpen&&isM()?1:0)+(typeof pfopen!=="undefined"&&pfopen?1:0)+(view==="dash"?0:Math.max(1,VST.length))+1);
+function navTop(){if(KD)return;const need=navNeed();while(NS<need){NS++;try{history.pushState({n:NS},"")}catch(e){NS--;break}}}
+function exitToast(){let t=$("#xt");if(!t){t=document.createElement("div");t.id="xt";document.body.appendChild(t)}t.textContent="Tekan kembali sekali lagi untuk keluar";t.classList.add("on");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("on"),2000)}
+document.addEventListener("pointerdown",()=>navTop(),true);document.addEventListener("click",()=>setTimeout(navTop,0));document.addEventListener("keydown",()=>navTop(),true);
+window.addEventListener("popstate",e=>{NS=(e.state&&e.state.n)||0;if(navIgn){navIgn--;return}
+ if(lockOpen)return;
+ if(mdOpen()){$("#md").innerHTML="";return}
+ if(spOpen()){closeSp();return}
+ if(sbOpen&&isM()){setSb(false);return}
+ if(typeof pfopen!=="undefined"&&pfopen){pf(false);return}
+ if(view!=="dash"){const v=VST.pop()||"dash";navPop=true;try{go(v,v==="new"&&!!ed)}finally{navPop=false}return}
+ if(NS>0){navIgn=1;history.go(-NS)}
+ exitToast()});
 document.addEventListener("visibilitychange",()=>{if(document.hidden)uiSave()});
 
 /* ---------- Notifikasi agenda (HP / browser) ---------- */
@@ -1351,6 +1381,28 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout
 navigator.serviceWorker&&navigator.serviceWorker.addEventListener&&navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.go)go(e.data.go)});
 function nCard(){if(KD)return"";const on=nOn(),den=NOK()&&Notification.permission==="denied";
  return`<div class="fc"><h2>Notifikasi agenda</h2><p class="mu" style="margin-top:0">${on?"Aktif. Saat Kreavin dibuka tiap hari kamu dapat ringkasan agenda hari ini, plus pengingat 15 menit sebelum agenda berjam.":den?"Izin notifikasi diblokir di browser. Buka pengaturan situs / aplikasi untuk mengizinkan.":"Tampilkan ringkasan agenda hari ini dan pengingat 15 menit sebelum acara di HP-mu."}</p><div class="chips">${on?`<button class="pl sm on" data-act="ntest">Kirim ringkasan sekarang</button><button class="pl sm" data-act="noff">Matikan</button>`:`<button class="pl sm on" data-act="non">Aktifkan notifikasi</button>`}</div></div>`}
+
+/* ---------- Pencarian umum di Beranda ---------- */
+let dq="";
+function qM(q,txt){q=nrm(q).trim();if(!q)return true;txt=nrm(txt);const W=txt.split(/[^a-z0-9]+/).filter(Boolean);return q.split(/\s+/).every(t=>tokOK(t,txt,W))}
+function hlQ(x,q){x=String(x||"");q=String(q||"").trim();if(!q)return esc(x);const T=q.split(/\s+/).filter(t=>t.length>1);if(!T.length)return esc(x);const re=new RegExp("("+T.map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|")+")","gi");return x.split(re).map((p,k)=>k%2?`<mark class="hl">${esc(p)}</mark>`:esc(p)).join("")}
+function dSearch(){return`<label class="srch dsr">${ico("search",18)}<input id="dq" type="search" value="${esc(dq)}" placeholder="Cari invoice, jadwal, gawean, tugas kuliah, klien…" autocomplete="off">${dq?`<button class="ic2" data-act="dqx" title="Hapus">${ico("x",14)}</button>`:""}</label><div id="dres">${dq.trim()?dResults():""}</div>`}
+function dResults(){const q=dq.trim(),m=t=>qM(q,t),h=x=>hlQ(x,q),sec=(t,n,b)=>n?`<h2 class="dsh">${t} <small>${n}</small></h2><div class="dsl">${b}</div>`:"";
+ const col=k=>(T[k]||["","#c9c8f5"])[1],ini=k=>((T[k]||["?"])[0]||"?")[0];
+ const IV=db.invoices.filter(i=>m([i.client,i.co,i.no,i.ev,i.mail,(i.items||[]).map(x=>x.d).join(" ")].join(" "))).sort((a,b)=>(b.dIn||"")<(a.dIn||"")?-1:1);
+ const ivR=IV.slice(0,8).map(i=>`<button class="row" data-act="edinv" data-id="${i.id}"><span class="ic" style="background:${col(i.type)}">${esc(ini(i.type))}</span><span><b>${h(i.client||"-")}</b><small>${h(i.no)}${i.ev?" · "+h(i.ev):""}${i.co?" · "+h(i.co):""}</small></span><span class="r">${hideI?"Rp ••••":rp(calc(i).due)}<small>${i.paid?"Lunas":late(i)?"Terlambat":"Belum"}</small></span></button>`).join("");
+ const EV=[];(db.events||[]).forEach(e=>{if(!m([e.title,e.note].join(" ")))return;let d=e.date;if(e.rep==="w"&&d<TD){const x=Dd(TD);x.setDate(x.getDate()+((Dd(e.date).getDay()-x.getDay()+7)%7));d=iso(x);if(e.until&&d>e.until)d=e.date}EV.push({...e,date:d,key:e.rep==="w"?e.id+"_"+d:e.id})});
+ const evR=EV.slice(0,8).map(e=>`<button class="row" data-act="evo" data-k="${e.key}" data-d="${e.date}"><span class="ic" style="background:${e.color}">${Dd(e.date).getDate()}</span><span><b>${h(e.title)}</b><small>${fd(e.date)} · ${tLbl(e)}${e.rep==="w"?" · setiap minggu":""}${e.note?" · "+h(e.note):""}</small></span></button>`).join("");
+ const PJ=db.projects.filter(p=>m([p.title,p.client,ST[p.status],(T[p.type]||[""])[0]].join(" ")));
+ const pjR=PJ.slice(0,8).map(p=>`<button class="row" data-act="selp" data-id="${p.id}"><span class="ic" style="background:${col(p.type)}">${esc(ini(p.type))}</span><span><b>${h(p.title)}</b><small>${h(p.client||"Tanpa klien")} · ${ST[p.status]}${p.deadline?" · "+fd(p.deadline):""}</small></span><span class="r">${hideI?"Rp ••••":rp(p.price)}</span></button>`).join("");
+ const cn=t=>(db.kampus.courses.find(c=>c.id===t.cid)||{}).name||"";
+ const KT=db.kampus.tasks.filter(t=>m([t.title,cn(t),t.note].join(" ")));
+ const ktR=KT.slice(0,8).map(t=>`<button class="row" data-act="kopen" data-id="${t.id}"><span class="ic" style="background:#a9cdf5">T</span><span><b>${h(t.title)}</b><small>${h(cn(t)||"Tugas kuliah")}${t.deadline?" · "+fd(t.deadline.slice(0,10)):""}${t.status==="done"?" · selesai":""}</small></span></button>`).join("");
+ const IN=(db.income||[]).filter(x=>m([x.note,tn(x.type||"lain")].join(" ")));
+ const inR=IN.slice(0,6).map(x=>`<button class="row" data-go="inc"><span class="ic" style="background:${tc(x.type||"lain")}">${tn(x.type||"lain")[0]}</span><span><b>${h(x.note||"Pemasukan manual")}</b><small>${fd(x.date)} · ${esc(tn(x.type||"lain"))}</small></span><span class="r">${hideI?"Rp ••••":rp(+x.amount||0)}</span></button>`).join("");
+ const tot=IV.length+EV.length+PJ.length+KT.length+IN.length;
+ return`<div class="dsr-out"><p class="ires">${tot} hasil untuk "<b>${esc(q)}</b>"</p>${sec("Invoice",IV.length,ivR)}${sec("Jadwal & agenda",EV.length,evR)}${sec("Gawean",PJ.length,pjR)}${sec("Tugas kuliah",KT.length,ktR)}${sec("Pemasukan",IN.length,inR)}${tot?"":`<p class="mu">Tidak ada yang cocok. Coba kata lain.</p>`}</div>`}
+document.addEventListener("input",e=>{if(e.target.id==="dq"){dq=e.target.value;document.body.classList.toggle("dsq",!!dq.trim());const r=$("#dres");if(r)r.innerHTML=dq.trim()?dResults():""}});
 /* ---------- Boot ---------- */
 function boot(){const L=["Menyalakan inti sistem...","Memuat data gawean...","Memeriksa invoice yang belum dibayar...","Memuat tugas kuliah...",`<em>${greet()}${S().name?", "+esc(S().name):""}. Semua sistem siap.</em>`];
  let i=0;const bt=$("#bt"),b=$("#boot"),done=()=>{b.classList.add("out");setTimeout(()=>b.remove(),900)};b.onclick=done;
@@ -1359,7 +1411,7 @@ document.addEventListener("visibilitychange",()=>{if(document.hidden){clearTimeo
 window.addEventListener("focus",pull);window.addEventListener("beforeunload",()=>{if(pend)wr()});setInterval(pull,30000);
 const _ui=(()=>{try{return JSON.parse(localStorage.getItem(UIK))}catch(e){return null}})(),_res=!!(_ui&&Date.now()-_ui.t<12*3600e3);
 if(_res){if(VIEWS.includes(_ui.v))view=_ui.v;if(_ui.cv)cv=_ui.cv;if(_ui.kcd&&/^\d{4}-\d\d-\d\d$/.test(_ui.kcd))kcd=_ui.kcd}
-try{history.replaceState({v:view},"")}catch(e){}
+try{history.replaceState({n:0},"")}catch(e){}
 render();restore();if(_res){const b=$("#boot");if(b)b.remove()}else boot();
 </script>
 </body>
