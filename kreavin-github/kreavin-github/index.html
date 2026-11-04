@@ -571,7 +571,7 @@ async function gConnect(forcePick){if(!gcid()){gSetup();return}
   await gUse(f.id,f.name)}
  catch(e){alert("Google Drive: "+e.message)}}
 function gSetup(){openM(`<h2>Atur Google Drive</h2><p class="mu">Isi sekali saja (dari Google Cloud). Setelah tersimpan, ketuk Sambungkan Google Drive.</p><label>OAuth Client ID</label><input id="gc_c" value="${esc(gcid())}" placeholder="xxxx.apps.googleusercontent.com"><label>API key (Google Picker)</label><input id="gc_k" value="${esc(gkey())}"><label>Project number (App ID)</label><input id="gc_a" value="${esc(gapp())}"><p class="mu">Alamat aplikasi: <b>${esc(location.origin)}</b></p><div class="chips" style="margin-top:12px"><button class="pl on" data-act="gcsave">Simpan</button></div>`)}
-let lockMode="";async function restore(){try{await restore0()}catch(e){}restored=true;render()}
+let lockMode="";async function restore(){try{await restore0()}catch(e){}restored=true;render();setTimeout(()=>notifyToday(false),2500)}
 async function restore0(){if(!KD&&lsG("kv_mode")==="gdrive"){const g=jG("kv_gfile");if(gcid())loadGIS().catch(()=>{});if(g){fh=new GH(g.id,g.name);fname="Google Drive · "+g.name;stat=gOK()?"ok":"need";if(stat==="ok"){try{await ld(fh);loaded=true}catch(e){stat="need"}}}render();return}
  if(KD){try{const i=await KD.info();fh=new KH(i.name);fname=i.name;stat="ok";if(i.exists&&i.size>0)await ld(fh);else{pend=true;await wr()}loaded=true;save()}catch(e){stat="need"}render();return}
  if(!FSA)return;try{const h=await idb("get");if(!h)return;fh=h;fname=h.name;if(await h.queryPermission({mode:"readwrite"})==="granted"){stat="ok";await ld(h)}else stat="need"}catch(e){}render()}
@@ -1107,7 +1107,7 @@ function vSet(){const s=S(),f=(l,k,t="text")=>`<label>${l}</label><input type="$
  return`${head()}<div style="max-width:560px"><div class="fc"><h2>Penyimpanan data</h2><p class="mu" style="margin-top:0">${stat==="ok"?`Data otomatis tersimpan ke file <b>${esc(fname)}</b> setiap ada perubahan.`:FSA?"Belum terhubung ke file. Buat file di folder Documents, atau buka file lama setelah install ulang.":"Perangkat ini menyimpan data di dalam aplikasi. Pakai ekspor dan impor cadangan untuk memindahkan data."}</p>
  <div class="chips">${FSA?`<button class="pl sm on" data-act="pnew">Buat file data baru</button><button class="pl sm" data-act="popen">Buka file data yang ada</button>`:""}<button class="pl sm" data-act="exp">Ekspor cadangan</button><button class="pl sm" data-act="imp">Impor cadangan</button></div>
  <p class="mu">Supaya ikut tersimpan di akun Google, taruh file data di dalam folder Google Drive for desktop. Drive akan menyinkronkannya otomatis.</p></div>
- ${KD?"":`<div class="fc"><h2>Google Drive · HP, tablet, PC</h2><p class="mu" style="margin-top:0">${fh&&fh.kind==="gdrive"?`Tersinkron dengan <b>${esc(fh.name)}</b> di Google Drive. Perangkat lain yang login akun Google yang sama memakai data ini juga.`:"Sambungkan ke file <b>kreavin-data.json</b> yang sudah ada di Google Drive-mu (yang dipakai versi .exe) supaya datanya sama di HP, tablet, dan PC."}</p><div class="chips"><button class="pl sm on" data-act="gconn">${fh&&fh.kind==="gdrive"?"Sambungkan ulang":"Sambungkan Google Drive"}</button><button class="pl sm" data-act="gpick">Pilih file di Drive</button>${fh&&fh.kind==="gdrive"?`<button class="pl sm" data-act="gout">Putuskan</button>`:""}<button class="pl sm" data-act="gsetup">Client ID</button></div></div>`}<div class="fc"><h2>Profil kamu</h2>${f("Nama / nama usaha","name")}${f("Email","mail")}${f("No. HP","tel")}<label>Alamat</label><textarea data-s="addr">${esc(s.addr)}</textarea><label>Info pembayaran (bank, no. rek, a.n.)</label><textarea data-s="bank">${esc(s.bank)}</textarea></div>
+ ${nCard()}${KD?"":`<div class="fc"><h2>Google Drive · HP, tablet, PC</h2><p class="mu" style="margin-top:0">${fh&&fh.kind==="gdrive"?`Tersinkron dengan <b>${esc(fh.name)}</b> di Google Drive. Perangkat lain yang login akun Google yang sama memakai data ini juga.`:"Sambungkan ke file <b>kreavin-data.json</b> yang sudah ada di Google Drive-mu (yang dipakai versi .exe) supaya datanya sama di HP, tablet, dan PC."}</p><div class="chips"><button class="pl sm on" data-act="gconn">${fh&&fh.kind==="gdrive"?"Sambungkan ulang":"Sambungkan Google Drive"}</button><button class="pl sm" data-act="gpick">Pilih file di Drive</button>${fh&&fh.kind==="gdrive"?`<button class="pl sm" data-act="gout">Putuskan</button>`:""}<button class="pl sm" data-act="gsetup">Client ID</button></div></div>`}<div class="fc"><h2>Profil kamu</h2>${f("Nama / nama usaha","name")}${f("Email","mail")}${f("No. HP","tel")}<label>Alamat</label><textarea data-s="addr">${esc(s.addr)}</textarea><label>Info pembayaran (bank, no. rek, a.n.)</label><textarea data-s="bank">${esc(s.bank)}</textarea></div>
  <div class="fc"><h2>Kategori invoice</h2><button class="pl sm" data-act="cat">Kelola kategori</button><p class="mu">Video, Motion, Graphic Design, dan Drum tetap. Kategori lain yang kamu buat dikelompokkan sebagai Lainnya di dashboard.</p></div><div class="fc"><h2>Bahasa</h2><div class="chips"><button class="pl ${lg==="id"?"on":""}" data-act="lang" data-n="id">Bahasa Indonesia</button><button class="pl ${lg==="en"?"on":""}" data-act="lang" data-n="en">English</button></div><p class="mu">Pilih bahasa tampilan aplikasi.</p></div><div class="fc"><h2>Tema</h2><div class="chips"><button class="pl ${th==="1"?"on":""}" data-act="th" data-n="1">Tema 1 · Mauve gelap</button><button class="pl ${th==="2"?"on":""}" data-act="th" data-n="2">Tema 2 · Burgundy</button><button class="pl ${th==="3"?"on":""}" data-act="th" data-n="3">Tema 3 · Terang</button></div><p class="mu">Tema langsung berlaku ke seluruh aplikasi dan tersimpan di file data.</p></div>
  <div class="fc"><h2>Tampilan &amp; data</h2><p class="mu" style="margin-top:0">Font Montserrat ${mf?"terdeteksi di komputermu dan dipakai.":"tidak ditemukan di komputermu, jadi memakai Segoe UI atau Arial. Install font Montserrat lalu muat ulang untuk memakainya."}</p><div class="chips"><button class="pl sm" data-act="rmdemo">Hapus data contoh</button><button class="pl sm" data-act="reset">Hapus semua data</button></div></div></div>`}
 
@@ -1123,6 +1123,9 @@ document.addEventListener("click",e=>{
  const a=e.target.closest("[data-act]");if(!a)return;const d=a.dataset,act=d.act;
  const inv=()=>db.invoices.find(i=>i.id===d.id),pr=()=>db.projects.find(p=>p.id===d.id);
  if(act==="sbt")setSb(!sbOpen);
+ else if(act==="non")nEnable();
+ else if(act==="noff"){lsS("kv_notif","");nTm.forEach(clearTimeout);render()}
+ else if(act==="ntest")notifyToday(true);
  else if(act==="kday"){const n=d.d>kcd?1:-1;kcAnim=d.d===kcd?"":n>0?"kc-sl":"kc-sr";kcd=d.d;render();setTimeout(()=>{kcAnim=""},400)}
  else if(act==="mmore")moreM();
  else if(act==="mgo"){$("#md").innerHTML="";go(d.v)}
@@ -1307,6 +1310,31 @@ window.addEventListener("popstate",e=>{const keep=()=>{try{history.pushState({v:
  if(typeof pfopen!=="undefined"&&pfopen){pf(false);keep();return}
  const v=(e.state&&e.state.v)||"dash";navPop=true;try{go(v,v==="new"&&!!ed)}finally{navPop=false}});
 document.addEventListener("visibilitychange",()=>{if(document.hidden)uiSave()});
+
+/* ---------- Notifikasi agenda (HP / browser) ---------- */
+const NOK=()=>"Notification" in window&&"serviceWorker" in navigator&&/^https?:/.test(location.protocol)&&!KD;
+const nOn=()=>NOK()&&Notification.permission==="granted"&&lsG("kv_notif")==="1";
+const agLine=e=>(e.allDay?"":tmf(e.s)+(e.e?"–"+tmf(e.e):"")+" · ")+e.title;
+async function swReg(){try{return await navigator.serviceWorker.ready}catch(e){return null}}
+async function agCache(){if(!NOK())return;try{const days={};for(let i=0;i<21;i++){const d=addD(i,TD);days[d]=evAll(d,d).map(agLine)}
+ const c=await caches.open("kreavin-agenda");await c.put("agenda.json",new Response(JSON.stringify({days,at:Date.now()}),{headers:{"Content-Type":"application/json"}}))}catch(e){}}
+async function agShown(set){try{const c=await caches.open("kreavin-agenda");if(set){await c.put("shown.json",new Response(JSON.stringify({d:set})));return set}const r=await c.match("shown.json");return r?(await r.json()).d:""}catch(e){return lsG("kv_nday")||""}}
+async function notifyToday(force){if(!nOn()||stat!=="ok")return;const L=evAll(TD,TD);await agCache();
+ if(!force&&(await agShown())===TD)return;if(!L.length&&!force)return;const r=await swReg();if(!r)return;
+ r.showNotification(L.length?`Agenda hari ini (${L.length})`:"Tidak ada agenda hari ini",{body:L.length?L.slice(0,6).map(agLine).join("\n")+(L.length>6?`\n+${L.length-6} lainnya`:""):"Hari ini kosong. Selamat istirahat!",tag:"kv-today",icon:"icon-192.png",badge:"icon-192.png",data:{v:"cal"}});
+ await agShown(TD);lsS("kv_nday",TD);nSchedule()}
+let nTm=[];
+function nSchedule(){nTm.forEach(clearTimeout);nTm=[];if(!nOn())return;const now=Date.now();
+ evAll(TD,TD).filter(e=>!e.allDay&&e.s).forEach(e=>{const at=new Date(TD+"T"+e.s+":00").getTime()-15*60e3,k=TD+e.key;if(at<=now||(lsG("kv_nf")||"").includes(k))return;
+  nTm.push(setTimeout(async()=>{const r=await swReg();if(!r)return;r.showNotification("15 menit lagi: "+e.title,{body:tLbl(e)+(e.sub?" · "+e.sub:""),tag:"kv-"+e.key,icon:"icon-192.png",data:{v:"cal"}});lsS("kv_nf",((lsG("kv_nf")||"").split("|").filter(x=>x.startsWith(TD)).concat(k)).join("|"))},at-now))})}
+async function nEnable(){if(!NOK()){alert("Notifikasi hanya bisa di versi web yang dipasang di HP / browser.");return}
+ const p=await Notification.requestPermission();if(p!=="granted"){alert("Izin notifikasi ditolak. Aktifkan lewat pengaturan situs di browser kalau berubah pikiran.");render();return}
+ lsS("kv_notif","1");const r=await swReg();try{if(r&&r.periodicSync){const st=await navigator.permissions.query({name:"periodic-background-sync"});if(st.state==="granted")await r.periodicSync.register("kv-agenda",{minInterval:6*3600e3})}}catch(e){}
+ render();notifyToday(true)}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>notifyToday(false),1500)});
+navigator.serviceWorker&&navigator.serviceWorker.addEventListener&&navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.go)go(e.data.go)});
+function nCard(){if(KD)return"";const on=nOn(),den=NOK()&&Notification.permission==="denied";
+ return`<div class="fc"><h2>Notifikasi agenda</h2><p class="mu" style="margin-top:0">${on?"Aktif. Saat Kreavin dibuka tiap hari kamu dapat ringkasan agenda hari ini, plus pengingat 15 menit sebelum agenda berjam.":den?"Izin notifikasi diblokir di browser. Buka pengaturan situs / aplikasi untuk mengizinkan.":"Tampilkan ringkasan agenda hari ini dan pengingat 15 menit sebelum acara di HP-mu."}</p><div class="chips">${on?`<button class="pl sm on" data-act="ntest">Kirim ringkasan sekarang</button><button class="pl sm" data-act="noff">Matikan</button>`:`<button class="pl sm on" data-act="non">Aktifkan notifikasi</button>`}</div></div>`}
 /* ---------- Boot ---------- */
 function boot(){const L=["Menyalakan inti sistem...","Memuat data gawean...","Memeriksa invoice yang belum dibayar...","Memuat tugas kuliah...",`<em>${greet()}${S().name?", "+esc(S().name):""}. Semua sistem siap.</em>`];
  let i=0;const bt=$("#bt"),b=$("#boot"),done=()=>{b.classList.add("out");setTimeout(()=>b.remove(),900)};b.onclick=done;
